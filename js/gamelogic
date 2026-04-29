@@ -11,6 +11,17 @@
   // if (firstPlayer === COMPUTER) { setTimeout... }
 
 }
+// computerMove calls itself again after each move:
+function computerMove() {
+  if (currentNode.terminal) return;
+  currentNode = getBestComputerMove(currentNode, algorithm, depthLimit);
+  checkGameEnd(); renderGame();
+  if (!currentNode.terminal) {
+    setTimeout(computerMove, getComputerDelayMs()); // plays both sides!
+
+  }
+}
+// Remove humanMove event handlers from number buttons
 
 // Global variable to store the current state of the game (the active node).
 let currentNode = null;
