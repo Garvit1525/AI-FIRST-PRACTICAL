@@ -10,14 +10,13 @@
 
   // if (firstPlayer === COMPUTER) { setTimeout... }
 
-}
 // computerMove calls itself again after each move:
-function computerMove() {
-  if (currentNode.terminal) return;
-  currentNode = getBestComputerMove(currentNode, algorithm, depthLimit);
-  checkGameEnd(); renderGame();
-  if (!currentNode.terminal) {
-    setTimeout(computerMove, getComputerDelayMs()); // plays both sides!
+//function computerMove() {
+ // if (currentNode.terminal) return;
+ // currentNode = getBestComputerMove(currentNode, algorithm, depthLimit);
+ // checkGameEnd(); renderGame();
+ // if (!currentNode.terminal) {
+  //  setTimeout(computerMove, getComputerDelayMs()); // plays both sides!
 
   }
 }
