@@ -1,0 +1,191 @@
+// ========== PART 4 ==========
+// ========== AI ALGORITHMS & HEURISTIC ==========
+
+// A counter to keep track of every single "future move" the computer thinks about.
+let nodesGeneratedCount = 0;
+// A counter to keep track of how many times the computer actually does the final math.
+let nodesEvaluatedCount = 0;
+
+// The "Guessing" Function (Heuristic). 
+// Since the computer can't see all the way to the end of a 25-number game, it has to guess who is winning.
+function getHeuristicScore(node) {
+    // We only add to this counter when we stop searching and actually guess the score.
+    nodesEvaluatedCount++;
+    // It simply subtracts the human's points from the computer's points. 
+    // If the answer is positive (like +5), the computer knows it is winning.
+    return node.compPts - node.humanPts;
+}
+
+// The "Brute Force" Brain. It looks at every single possible future move.
+function runMinimax(node, depth, isComputerTurn) {
+    // Add 1 to our counter because we are looking at a new move.
+    nodesGeneratedCount++;
+
+    // The STOP Sign. We stop looking into the future if we hit our depth limit (like 4 turns ahead) OR if the board is completely empty.
+    if (depth === 0 || node.terminal) {
+        // Return our "guess" of who is winning at this exact moment.
+        return getHeuristicScore(node);
+    }
+
+    // If we haven't built the next possible moves for this scenario yet, build them now.
+    if (node.children.length === 0) {
+        expandNode(node);
+    }
+
+    // If we are simulating the Computer's turn...
+    if (isComputerTurn) {
+        // The computer wants the HIGHEST score possible. We start at the worst possible score (-Infinity).
+        let maxScore = -Infinity;
+        // Look at every single choice the computer has right now.
+        for (let i = 0; i < node.children.length; i++) {
+            let currentChild = node.children[i];
+            
+            // Look one turn deeper into the future by calling this exact same function again.
+            let score = runMinimax(currentChild, depth - 1, false);
+            
+            // If this future move gives us a better score than what we have, keep it.
+            if (score > maxScore) {
+                maxScore = score;
+            }
+        }
+        // Send the best score we found back up.
+        return maxScore;
+        
+    // If we are simulating the Human's turn...
+    } else {
+        // The AI assumes the human wants the LOWEST score for the computer. We start at Infinity.
+        let minScore = Infinity;
+        // Look at every single choice the human has.
+        for (let i = 0; i < node.children.length; i++) {
+            let currentChild = node.children[i];
+            
+            // Look one turn deeper into the future.
+            let score = runMinimax(currentChild, depth - 1, true);
+            
+            // If this move is worse for the computer, the AI assumes the human will pick it.
+            if (score < minScore) {
+                minScore = score;
+            }
+        }
+        // Send the worst-case score back up.
+        return minScore;
+    }
+}
+
+// The "Smart" Brain. It does exactly what Minimax does, but it skips moves that are obviously bad.
+function runAlphaBeta(node, depth, alpha, beta, isComputerTurn) {
+    nodesGeneratedCount++;
+
+    // The STOP Sign (same as Minimax).
+    if (depth === 0 || node.terminal) {
+        return getHeuristicScore(node);
+    }
+
+    // Build the next possible moves.
+    if (node.children.length === 0) {
+        expandNode(node);
+    }
+
+    // If we are simulating the Computer's turn...
+    if (isComputerTurn) {
+        let maxScore = -Infinity;
+        for (let i = 0; i < node.children.length; i++) {
+            let currentChild = node.children[i];
+            // Look one turn deeper.
+            let score = runAlphaBeta(currentChild, depth - 1, alpha, beta, false);
+            
+            if (score > maxScore) { maxScore = score; }
+            
+            // 'Alpha' is the safety net. It tracks the best score the computer is ALREADY guaranteed to get.
+            if (score > alpha) { alpha = score; }
+            
+            // THE SHORTCUT (Pruning). If the human has a better move on a different path (beta is less than alpha), 
+            // the computer stops checking this path immediately. It breaks the loop to save time.
+            if (beta <= alpha) {
+                break; 
+            }
+        }
+        return maxScore;
+        
+    // If we are simulating the Human's turn...
+    } else {
+        let minScore = Infinity;
+        for (let i = 0; i < node.children.length; i++) {
+            let currentChild = node.children[i];
+            let score = runAlphaBeta(currentChild, depth - 1, alpha, beta, true);
+            
+            if (score < minScore) { minScore = score; }
+            
+            // 'Beta' tracks the best score the human is ALREADY guaranteed to force the computer into.
+            if (score < beta) { beta = score; }
+            
+            // THE SHORTCUT (Pruning). If the computer already found a better move elsewhere, 
+            // the human stops checking this path.
+            if (beta <= alpha) {
+                break;
+            }
+        }
+        return minScore;
+    }
+}
+
+// The manager function that actually tells the AI to take its turn.
+function getBestComputerMove(currentNode, algorithmName, depthLimit) {
+    // Reset our counters to 0 so we only track the stats for THIS specific turn.
+    nodesGeneratedCount = 0;
+    nodesEvaluatedCount = 0;
+    
+    // Start a timer so we know exactly how many milliseconds the AI takes to think.
+    let startTime = performance.now();
+
+    // Make sure we know what our immediate options are.
+    if (currentNode.children.length === 0) {
+        expandNode(currentNode);
+    }
+
+    // Variables to hold the actual winning move and its score.
+    let bestNodeToPlay = null;
+    let bestScoreFound = -Infinity;
+
+    // Look at every immediate choice the computer has right now on the actual board.
+    for (let i = 0; i < currentNode.children.length; i++) {
+        let childNode = currentNode.children[i];
+        let moveScore = 0;
+
+        // Run the algorithm the user picked from the dropdown menu.
+        if (algorithmName === "Minimax") {
+            moveScore = runMinimax(childNode, depthLimit - 1, false);
+        } else if (algorithmName === "AlphaBeta") {
+            // Alpha-Beta starts with -Infinity (worst computer score) and Infinity (worst human score).
+            moveScore = runAlphaBeta(childNode, depthLimit - 1, -Infinity, Infinity, false);
+        }
+
+        // If this choice gave us a better score than our previous choices...
+        if (moveScore > bestScoreFound) {
+            // ...save the score.
+            bestScoreFound = moveScore;
+            // ...and remember that THIS child node is the move we want to make.
+            bestNodeToPlay = childNode;
+        }
+    }
+
+    // Stop the timer.
+    let endTime = performance.now();
+    // Calculate how long it took in milliseconds.
+    let totalTimeMs = endTime - startTime;
+    
+    // Add this turn's stats to the total game stats for the final report.
+    totalGameNodes += nodesGeneratedCount;
+    totalGameEvaluated += nodesEvaluatedCount;
+    totalMoveTime += totalTimeMs;
+    totalMoves += 1;
+
+    // Print the stats for this specific turn to the console.
+    console.log("--- " + algorithmName + " Turn Stats ---");
+    console.log("Nodes Generated (Total moves looked at): " + nodesGeneratedCount);
+    console.log("Nodes Evaluated (Total times we did the math): " + nodesEvaluatedCount);
+    console.log("Time Taken: " + totalTimeMs.toFixed(2) + " ms");
+
+    // Give the final chosen move back to the game to update the screen.
+    return bestNodeToPlay; 
+}
