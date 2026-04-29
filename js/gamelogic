@@ -1,5 +1,16 @@
 // ========== PART 2 ==========
 // ========== GAME LOGIC ==========
+// In startGame() — remove the computer-first block entirely:
+//function startGame(length, firstPlayer, algo, depth) {
+  //algorithm = algo; depthLimit = depth;
+  //let nums = makeNumArray(length);
+  //currentNode = makeStartNode(nums, HUMAN);  // ← always HUMAN
+
+  // REMOVE this entire block:
+
+  // if (firstPlayer === COMPUTER) { setTimeout... }
+
+}
 
 // Global variable to store the current state of the game (the active node).
 let currentNode = null;
