@@ -1,0 +1,214 @@
+// ========== PART 2 ==========
+// ========== GAME LOGIC ==========
+
+// Global variable to store the current state of the game (the active node).
+let currentNode = null;
+// The depth limit tells the AI how many moves to look ahead into the future.
+let depthLimit = 4;
+// Stores which "brain" the AI is using: standard Minimax or the faster Alpha-Beta.
+let algorithm = "AlphaBeta";
+// A simple "on/off" switch to manage when console logs for a round should start or stop.
+let roundInProgress = false;
+// Global counter to track every single move the AI explores throughout the whole game.
+let totalGameNodes = 0;
+// Global counter to track how many times the AI did the final math (heuristic) in the game.
+let totalGameEvaluated = 0;
+// Tracks the total milliseconds the AI spent "thinking" over the course of the game.
+let totalMoveTime = 0;
+// Counts how many turns the computer has actually taken.
+let totalMoves = 0;
+
+// Creates a random delay between 700ms and 1400ms for the computer's "thinking" time.
+function getComputerDelayMs() {
+    // This makes the game feel more natural so the AI doesn't move instantly.
+    return Math.floor(Math.random() * 701) + 700;
+}
+
+// The main function that sets up the board and begins the match.
+function startGame(length, firstPlayer, chosenAlgorithm, chosenDepth) {
+
+    // Validates that the board size is within the allowed range (15 to 25 numbers).
+    if (length < 15 || length > 25) {
+        console.log("Invalid length. Must be between 15 and 25.");
+        return; // Stops the game if the user enters a bad number.
+    }
+
+    // Assigns the user's settings to the global variables.
+    algorithm = chosenAlgorithm;
+    depthLimit = chosenDepth;
+
+    // Creates the initial array of numbers (1s, 2s, and 3s).
+    let nums = makeNumArray(length);
+
+    // Prints the initial game setup to the console for debugging.
+    console.log("[Setup] Numbers: [" + nums + "] | Algorithm: " + algorithm + " | First: " + firstPlayer);
+
+    // Creates the "Root Node" (the starting point of the game tree).
+    currentNode = makeStartNode(nums, firstPlayer);
+
+    // If the computer is chosen to go first, it triggers the AI move after a small delay.
+    if (firstPlayer === COMPUTER) {
+        setTimeout(function () {
+            // Checks to ensure it's still the computer's turn before moving.
+            if (!currentNode.terminal && currentNode.whoseTurn === COMPUTER) {
+                computerMove(); // Trigger the AI brain.
+
+                // If a UI function exists, update the screen to show what the AI did.
+                if (typeof setLatestMove === "function" && currentNode.removedNum !== null) {
+                    setLatestMove("ai", currentNode.removedNum);
+                }
+                // Redraws the visual board on the screen.
+                if (typeof renderGame === "function") {
+                    renderGame();
+                }
+            }
+        }, getComputerDelayMs()); // Uses the random 700ms-1400ms delay.
+    }
+}
+
+// Prints the current list of numbers and the scores to the console.
+function showGameState() {
+    console.log("Numbers: [" + currentNode.nums + "]");
+    console.log("H: " + currentNode.humanPts + " | C: " + currentNode.compPts + " | Turn: " + currentNode.whoseTurn);
+}
+
+// Function triggered when the human player clicks a number button.
+function humanMove(index) {
+
+    // Safety check: Prevents the human from clicking during the AI's turn.
+    if (currentNode.whoseTurn !== HUMAN) {
+        console.log("It's not the human turn.");
+        return;
+    }
+
+    // Safety check: Prevents clicking on an index that doesn't exist.
+    if (index < 0 || index >= currentNode.nums.length) {
+        console.log("Invalid index.");
+        return;
+    }
+
+    // Prints a header in the console if this is the start of a turn cycle.
+    if (!roundInProgress) {
+        console.log("=== ROUND START ===");
+        showGameState();
+        roundInProgress = true;
+    }
+
+    // Updates the game state by applying the human's chosen move.
+    currentNode = applyMove(currentNode, index);
+
+    // Tells the user exactly which number value they removed.
+    console.log("Human removed:", currentNode.removedNum);
+
+    // Checks if that move emptied the board and ended the game.
+    checkGameEnd();
+
+    // If the game is over, close the round logging.
+    if (currentNode.terminal) {
+        console.log("=== ROUND END ===");
+        roundInProgress = false;
+    }
+
+    // If the game is still going, tell the computer it's now its turn.
+    if (!currentNode.terminal && currentNode.whoseTurn === COMPUTER) {
+        setTimeout(function () {
+            // Wait for the random delay, then let the AI play.
+            if (!currentNode.terminal && currentNode.whoseTurn === COMPUTER) {
+                computerMove();
+
+                // UI updates to show the AI's choice.
+                if (typeof setLatestMove === "function" && currentNode.removedNum !== null) {
+                    setLatestMove("ai", currentNode.removedNum);
+                }
+                if (typeof renderGame === "function") {
+                    renderGame();
+                }
+            }
+        }, getComputerDelayMs());
+    }
+}
+
+// The core function for the Computer's turn.
+function computerMove() {
+
+    // Stops if the game is already finished.
+    if (currentNode.terminal) return;
+
+    // Handles round logging.
+    if (!roundInProgress) {
+        console.log("=== ROUND START ===");
+        showGameState();
+        roundInProgress = true;
+    }
+
+    // Calls the AI algorithm (Minimax/AlphaBeta) to find the mathematically best move.
+    let bestMove = getBestComputerMove(currentNode, algorithm, depthLimit);
+
+    // Updates the game state to the best move found by the AI.
+    currentNode = bestMove;
+
+    // Logs the AI's decision.
+    console.log("Computer removed:", currentNode.removedNum);
+
+    // Shows the new state of the board.
+    showGameState();
+
+    // Checks if the computer's move ended the game.
+    checkGameEnd();
+    console.log("=== ROUND END ===");
+    roundInProgress = false;
+}
+
+// Final check to determine the winner and display total game statistics.
+function checkGameEnd() {
+    // Only proceed if the board is empty (terminal state).
+    if (!currentNode.terminal) return;
+
+    // Determine the winner (Human, Computer, or Draw).
+    let winner = getWinner(currentNode);
+    // Calculate how fast the computer thought on average.
+    let avgTime = totalMoves > 0 ? (totalMoveTime / totalMoves).toFixed(2) : 0;
+
+    // Print final performance report for the AI.
+    console.log("=== GAME TOTAL STATS ===");
+    console.log("Total Nodes Generated: " + totalGameNodes);
+    console.log("Total Nodes Evaluated: " + totalGameEvaluated);
+    console.log("Average Move Time: " + avgTime + " ms");
+
+    console.log("Game Over!");
+    if (winner === HUMAN) {
+        console.log("Human wins!");
+    }
+    else if (winner === COMPUTER) {
+        console.log("Computer wins!");
+    }
+    else {
+        console.log("Draw!");
+    }
+
+    // Resets all stats back to 0 so the next game starts fresh.
+    totalGameNodes = 0;
+    totalGameEvaluated = 0;
+    totalMoveTime = 0;
+    totalMoves = 0;
+}
+
+// Resets and starts the game over with the same settings.
+function restartGame(length, firstPlayer, chosenAlgorithm, chosenDepth) {
+    console.log("Restarting game...");
+    startGame(length, firstPlayer, chosenAlgorithm, chosenDepth);
+}
+
+// Legacy function to start the game using browser popup prompts.
+function startGameFromPrompt() {
+    let length = parseInt(prompt("Choose string length (15–25):"));
+    let first = prompt("Who starts? (human/computer)").toLowerCase();
+    let algo = prompt("Algorithm? (Minimax / AlphaBeta)");
+    let depth = parseInt(prompt("Search depth:"));
+
+    let firstPlayer = (first === "computer") ? COMPUTER : HUMAN;
+
+    startGame(length, firstPlayer, algo, depth);
+}
+
+// ========== PART 2 FINISH ==========
