@@ -1,0 +1,78 @@
+//  index 
+<div class="game-container">
+
+    <div id="setup-area">
+        <input type="number" id="input-len" value="15"> <select id="input-algo"> <option value="AlphaBeta">Alpha-Beta</option>
+        </select>
+        <button onclick="uiStartGame()">Start</button> </div>
+
+    <div id="game-area" class="hidden">
+        <div id="h-box">Human: <span id="h-pts">50</span></div>
+        <div id="c-box">Computer: <span id="c-pts">50</span></div>
+
+        <div id="button-grid"></div>
+    </div>
+</div>
+
+//gamelogic.js
+// GUI DATA SOURCE: The updateScores function
+// Every time this runs, the GUI "Score Boxes" must change their numbers.
+function updateScores(humanPts, compPts, removedNum, whoseTurn) {
+    // ... logic ...
+    // The GUI reads these returned values to update document.getElementById('h-pts')
+    return { hPts: hPts, cPts: cPts };
+}
+
+// GUI DATA SOURCE: The newNode function
+// The GUI looks at node.nums to decide how many buttons to draw on the screen.
+function newNode(numArray, ...) {
+    let node = {};
+    node.nums = numArray; // This array tells the GUI: "Draw this many buttons"
+    node.terminal = (numArray.length === 0); // If true, GUI shows "Game Over"
+    return node;
+}
+
+//algorithm
+// GUI CONTROLLER: getBestComputerMove function
+function getBestComputerMove(currentNode, algorithmName, depthLimit) {
+    // GUI PERFORMANCE STATS:
+    // These console logs are technically part of the "Developer GUI" (The Console)
+    // They tell the user how hard the AI is working.
+    console.log("Nodes Generated: " + nodesGeneratedCount);
+    console.log("Time Taken: " + totalTimeMs.toFixed(2) + " ms");
+
+    // This function returns the 'bestNode', which Part 2 uses to refresh the GUI.
+    return bestNodeToPlay; 
+}
+//index.js
+// GUI MANAGER: The renderUI function
+// This is the actual "Artist" that forces the HTML to change.
+function renderUI() {
+    // 1. UPDATE TEXT: Pushes P3 data into the HTML spans
+    document.getElementById("h-pts").innerText = currentNode.humanPts;
+    document.getElementById("c-pts").innerText = currentNode.compPts;
+
+    // 2. TURN VISUALS: Adds CSS classes to the score boxes
+    if (currentNode.whoseTurn === "human") {
+        document.getElementById("h-box").classList.add("active-turn");
+    } else {
+        document.getElementById("c-box").classList.add("active-turn");
+    }
+
+    // 3. DYNAMIC BUTTONS: Wipes the screen and redraws buttons
+    let grid = document.getElementById("button-grid");
+    grid.innerHTML = ""; // CLEAR SCREEN
+    
+    currentNode.nums.forEach((val, index) => {
+        let btn = document.createElement("button"); // CREATE ELEMENT
+        btn.className = "number-btn"; // STYLE ELEMENT
+        btn.innerText = val; // SET VALUE
+        
+        // GUI EVENT LINK: Connects physical click to the humanMove function
+        btn.onclick = function() {
+            humanMove(index); 
+            renderUI(); // RE-RENDER GUI
+        };
+        grid.appendChild(btn); // ATTACH TO SCREEN
+    });
+}
